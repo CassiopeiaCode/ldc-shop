@@ -1,26 +1,42 @@
 services:
   app:
-    build:
-      context: .
-      args:
-        - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+    image: ghcr.io/cassiopeiacode/ldc-shop:latest
     ports:
       - "3000:3000"
     environment:
-      # Database
+      # ============ 数据库配置 ============
+      # PostgreSQL 连接字符串，使用内置 db 服务
+      # 格式: postgresql://用户名:密码@主机:端口/数据库名
       - POSTGRES_URL=postgresql://postgres:postgres@db:5432/shop
-      # OAuth (LinuxDo Connect)
+
+      # ============ OAuth 认证配置 (LinuxDo Connect) ============
+      # 在 https://connect.linux.do 创建应用获取
+      # Client ID
       - OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID}
+      # Client Secret
       - OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET}
+      # NextAuth 加密密钥，用于加密 session
+      # 生成方式: openssl rand -base64 32
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      # NextAuth 回调地址，必须与 NEXT_PUBLIC_APP_URL 一致
       - NEXTAUTH_URL=${NEXT_PUBLIC_APP_URL}
-      # Payment
+
+      # ============ 支付配置 (EPay) ============
+      # 商户 ID
       - MERCHANT_ID=${MERCHANT_ID}
+      # 商户密钥
       - MERCHANT_KEY=${MERCHANT_KEY}
+      # 支付网关地址，默认为 Linux DO Credit
       - PAY_URL=${PAY_URL:-https://credit.linux.do/epay/pay/submit.php}
-      # Admin
+
+      # ============ 管理员配置 ============
+      # 管理员用户名列表，逗号分隔，不区分大小写
+      # 例如: admin1,admin2,admin3
       - ADMIN_USERS=${ADMIN_USERS}
-      # App URL
+
+      # ============ 应用配置 ============
+      # 应用公开访问地址，用于生成回调 URL
+      # 例如: https://shop.example.com
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
     depends_on:
       db:
@@ -30,10 +46,14 @@ services:
   db:
     image: postgres:16-alpine
     environment:
+      # PostgreSQL 用户名
       - POSTGRES_USER=postgres
+      # PostgreSQL 密码（生产环境请修改）
       - POSTGRES_PASSWORD=postgres
+      # 数据库名称
       - POSTGRES_DB=shop
     volumes:
+      # 数据持久化存储
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
